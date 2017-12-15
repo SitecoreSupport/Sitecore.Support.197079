@@ -31,19 +31,85 @@ using Sitecore.Web.UI.XmlControls;
 using Sitecore.WFFM.Abstractions.Analytics;
 using Sitecore.WFFM.Abstractions.ContentEditor;
 using Sitecore.WFFM.Abstractions.Dependencies;
-using Sitecore.WFFM.Abstractions.Wrappers;
 using Action = System.Action;
 using HtmlUtil = Sitecore.Web.HtmlUtil;
 using ItemUtil = Sitecore.Form.Core.Utility.ItemUtil;
 using Version = Sitecore.Data.Version;
 using WebUtil = Sitecore.Web.WebUtil;
 using XmlControl = Sitecore.Web.UI.XmlControls.XmlControl;
-using SecurityModel;
+using Sitecore.SecurityModel;
+using Sitecore.Support.Form.Core.Visual;
 
 namespace Sitecore.Support.Forms.Shell.UI
 {
     public class FormDesigner : ApplicationForm
     {
+        #region start of modified part
+
+        private void RenameInitialFieldItemName()
+        {
+            ID initialFieldItemId = null;
+
+            //Database masterDb = Factory.GetDatabase("master");
+
+            Item formItem = this.GetCurrentItem();
+
+            if (formItem != null && formItem.HasChildren && HasInitialFieldItem(formItem, out initialFieldItemId))
+            {
+                string initialFieldTitle = GetInitialFieldTitle(initialFieldItemId);
+
+                if (!string.IsNullOrWhiteSpace(initialFieldTitle))
+                {
+                    Item itemToEdit = formItem.Database.GetItem(initialFieldItemId);
+
+                    using (new EditContext(itemToEdit))
+                    {
+                        itemToEdit.Name = initialFieldTitle;
+                    }
+                }
+            }
+        }
+
+
+        private bool HasInitialFieldItem(Item formItem, out ID initialFieldItemId)
+        {
+            initialFieldItemId = new ID();
+
+            Item[] formItemDescendants = formItem.Axes.GetDescendants();
+
+            for (int i = 0; i < formItemDescendants.Length; i++)
+            {
+                if (formItemDescendants[i].Name == "InitialFieldItemName")
+                {
+                    initialFieldItemId = formItemDescendants[i].ID;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string GetInitialFieldTitle(ID initialFieldItemId)
+        {
+            string initialFieldTitle = null;
+
+            foreach (SectionDefinition section in this.builder.FormStucture.Sections)
+            {
+                foreach (FieldDefinition field in section.Fields)
+                {
+                    if (field.FieldID.Equals(initialFieldItemId.ToString()))
+                    {
+                        initialFieldTitle = field.Name;
+                        break;
+                    }
+                }
+            }
+
+            return initialFieldTitle;
+        }
+
+        #endregion
+
         #region Constants
 
         public static readonly string FormBuilderID = "FormBuilderID";
@@ -146,7 +212,7 @@ namespace Sitecore.Support.Forms.Shell.UI
             {
                 using (new SecurityDisabler())
                 {
-                    TemplateItem template = item.Database.GetTemplate(Form.Core.Configuration.IDs.FieldTemplateID);
+                    TemplateItem template = item.Database.GetTemplate(Sitecore.Form.Core.Configuration.IDs.FieldTemplateID);
                     item.Add("InitialFieldItemName", template);
                 }
             }
@@ -237,7 +303,7 @@ namespace Sitecore.Support.Forms.Shell.UI
 
             string name = string.IsNullOrEmpty(item.SubmitName) ?
               DependenciesManager.ResourceManager.Localize("NO_BUTTON_NAME") :
-              Form.Core.Configuration.Translate.TextByItemLanguage(item.SubmitName, item.Language.GetDisplayName());
+              Sitecore.Form.Core.Configuration.Translate.TextByItemLanguage(item.SubmitName, item.Language.GetDisplayName());
 
             this.FormSubmit.Attributes["value"] = name;
 
@@ -273,6 +339,10 @@ namespace Sitecore.Support.Forms.Shell.UI
 
         protected virtual void SaveFormStructure(bool refresh, Action callback)
         {
+            #region start of modified part
+            RenameInitialFieldItemName();
+            #endregion
+
             FormDefinition definition = this.builder.FormStucture;
 
             bool isAsked = false;
@@ -372,27 +442,27 @@ namespace Sitecore.Support.Forms.Shell.UI
             Item form = this.GetCurrentItem();
             var formItem = new FormItem(form);
             form.Editing.BeginEdit();
-            form.Fields[FieldIDs.FormTitleID].Value = this.SettingsEditor.TitleName;
-            form.Fields[Form.Core.Configuration.FieldIDs.FormTitleTagID].Value = SettingsEditor.SelectedTitleTag.ToString();
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.FormTitleID].Value = this.SettingsEditor.TitleName;
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.FormTitleTagID].Value = SettingsEditor.SelectedTitleTag.ToString();
 
-            form.Fields[Form.Core.Configuration.FieldIDs.ShowFormTitleID].Value = Context.ClientPage.ClientRequest.Form["ShowTitle"];
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.ShowFormTitleID].Value = Context.ClientPage.ClientRequest.Form["ShowTitle"];
 
-            form.Fields[FieldIDs.FormIntroductionID].Value = this.SettingsEditor.Introduce;
-            form.Fields[FieldIDs.ShowFormIntroID].Value = Context.ClientPage.ClientRequest.Form["ShowIntro"];
-            form.Fields[FieldIDs.FormFooterID].Value = this.SettingsEditor.Footer;
-            form.Fields[FieldIDs.ShowFormFooterID].Value = Context.ClientPage.ClientRequest.Form["ShowFooter"];
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.FormIntroductionID].Value = this.SettingsEditor.Introduce;
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.ShowFormIntroID].Value = Context.ClientPage.ClientRequest.Form["ShowIntro"];
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.FormFooterID].Value = this.SettingsEditor.Footer;
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.ShowFormFooterID].Value = Context.ClientPage.ClientRequest.Form["ShowFooter"];
 
-            form.Fields[FieldIDs.FormSubmitID].Value =
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.FormSubmitID].Value =
                this.SettingsEditor.SubmitName == string.Empty
                   ? DependenciesManager.ResourceManager.Localize("NO_BUTTON_NAME")
                   : this.SettingsEditor.SubmitName;
 
-            form.Fields[FieldIDs.SaveActionsID].Value = this.SettingsEditor.SaveActions.ToXml();
-            form.Fields[FieldIDs.CheckActionsID].Value = this.SettingsEditor.CheckActions.ToXml();
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.SaveActionsID].Value = this.SettingsEditor.SaveActions.ToXml();
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.CheckActionsID].Value = this.SettingsEditor.CheckActions.ToXml();
 
-            form.Fields[FieldIDs.SuccessMessageID].Value = this.SettingsEditor.SubmitMessage;
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.SuccessMessageID].Value = this.SettingsEditor.SubmitMessage;
 
-            form.Fields[FieldIDs.SuccessModeID].Value = this.SettingsEditor.SuccessRedirect ?
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.SuccessModeID].Value = this.SettingsEditor.SuccessRedirect ?
                   WFFM.Abstractions.Constants.Core.Constants.RedirectMode : WFFM.Abstractions.Constants.Core.Constants.ShowMessageMode;
 
             var link = formItem.SuccessPage;
@@ -402,7 +472,7 @@ namespace Sitecore.Support.Forms.Shell.UI
                 link.Url = link.TargetItem.Paths.Path;
             }
 
-            form.Fields[FieldIDs.SuccessPageID].Value = link.Xml.OuterXml;
+            form.Fields[Sitecore.Form.Core.Configuration.FieldIDs.SuccessPageID].Value = link.Xml.OuterXml;
             form.Editing.EndEdit();
         }
 
@@ -429,13 +499,13 @@ namespace Sitecore.Support.Forms.Shell.UI
             var escapedPropValue = HttpUtility.UrlDecode(propValue);
             Item item = this.GetCurrentItem();
             IEnumerable<Pair<string, string>> properties = ParametersUtil.XmlToPairArray(escapedPropValue);
-
-            var result = new List<string>(PropertiesFactory.CompareTypes(properties,
+            #region start of modified part
+            var result = new List<string>(SupportPropertiesFactory.SupportCompareTypes(properties,
                                                                          item.Database.GetItem(newTypeID),
                                                                          item.Database.GetItem(oldTypeID),
-                                                                         FieldIDs.FieldTypeAssemblyID,
-                                                                         FieldIDs.FieldTypeClassID));
-
+                                                                         Sitecore.Form.Core.Configuration.FieldIDs.FieldTypeAssemblyID,
+                                                                         Sitecore.Form.Core.Configuration.FieldIDs.FieldTypeClassID));
+            #endregion
 
             if (result.Count > 0)
             {
@@ -479,7 +549,7 @@ namespace Sitecore.Support.Forms.Shell.UI
             {
                 try
                 {
-                    string html = PropertiesFactory.RenderPropertiesSection(type, FieldIDs.FieldTypeAssemblyID, FieldIDs.FieldTypeClassID);
+                    string html = PropertiesFactory.RenderPropertiesSection(type, Sitecore.Form.Core.Configuration.FieldIDs.FieldTypeAssemblyID, Sitecore.Form.Core.Configuration.FieldIDs.FieldTypeClassID);
 
                     var tracking = new Tracking(this.SettingsEditor.TrackingXml, item.Database);
 
@@ -793,7 +863,9 @@ namespace Sitecore.Support.Forms.Shell.UI
 
                             if (args.HasResult)
                             {
-                                li.Parameters = args.Result == "-" ? string.Empty : ParametersUtil.Expand(args.Result);
+                                #region start of modified part
+                                li.Parameters = args.Result == "-" ? string.Empty : PatchHelper.Expand(args.Result, false);
+                                #endregion
                                 this.SettingsEditor.UpdateCommands(list, this.builder.FormStucture.ToXml(), isSaveAction);
                             }
                         }
@@ -881,7 +953,9 @@ namespace Sitecore.Support.Forms.Shell.UI
                         args.Result = string.Empty;
                     }
 
-                    var collection = ParametersUtil.XmlToNameValueCollection(ParametersUtil.Expand(args.Result, true), true);
+                    #region start of modified part
+                    var collection = ParametersUtil.XmlToNameValueCollection(PatchHelper.Expand(args.Result, true), true);
+                    #endregion
 
                     SheerResponse.SetAttribute(args.Parameters["target"], "value", HttpUtility.UrlEncode(collection["queries"]));
                     SheerResponse.Eval("Sitecore.FormBuilder.executeOnChange($('" + args.Parameters["target"] + "'));");
@@ -980,7 +1054,7 @@ namespace Sitecore.Support.Forms.Shell.UI
                 }
                 if (string.IsNullOrEmpty(queryString))
                 {
-                    queryString = Utils.GetDataSource(WebUtil.GetQueryString());
+                    queryString = Sitecore.Form.Core.Utility.Utils.GetDataSource(WebUtil.GetQueryString());
                 }
                 return queryString;
             }

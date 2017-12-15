@@ -69,6 +69,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Forms\Shell\UI\FormDesigner.cs" />
+    <Compile Include="Forms\Shell\UI\PatchHelper.cs" />
+    <Compile Include="Form\Core\Visual\SupportPropertiesFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,7 @@
 <control xmlns:def="Definition" xmlns="http://schemas.sitecore.net/Visual-Studio-Intellisense">
   <Forms.FormDesigner>
     <FormPage  id="resizableCustom" Header="Form Designer">
-      <CodeBeside Type="Sitecore.Forms.Shell.UI.FormDesigner, Sitecore.Forms.Core"/>
+      <CodeBeside Type="Sitecore.Support.Forms.Shell.UI.FormDesigner, Sitecore.Support.197079"/>
 
 
       <Stylesheet Src="Default.css" DeviceDependant="true"/>
